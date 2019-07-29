@@ -79,7 +79,7 @@ struct SerConnect::Impl
 		cto.WriteTotalTimeoutConstant = 0;
 		cto.WriteTotalTimeoutMultiplier = 0;
 
-		return SetCommTimeouts(file_, &cto);
+		return static_cast<bool>(SetCommTimeouts(file_, &cto));
 	}
 
 	~Impl()

@@ -8,6 +8,7 @@
 #include "ymblog.h"
 
 #include <memory>
+#include <cstring>
 
 namespace YModbus {
 
@@ -265,18 +266,18 @@ int Protocol::VerifyMasterMsg(uint8_t *msg, size_t msglen)
 {
 	size_t len = 3; //id-fun-err
 	if (msglen < len)
-		return len - msglen;
+		return static_cast<int>(len - msglen);
 
 	if (msg[1] & 0x80)
 		return EOK; //exception msg
 
 	len = GetMasterMsgMinLen(msg);
 	if (msglen < len)
-		return len - msglen;
+		return static_cast<int>(len - msglen);
 
 	len = GetMasterMsgMaxLen(msg);
 	if (msglen < len)
-		return len - msglen;
+		return static_cast<int>(len - msglen);
 
 	return EOK; 
 }
@@ -285,18 +286,18 @@ int Protocol::VerifySlaveMsg(uint8_t *msg, size_t msglen)
 {
 	size_t len = 3; //id-fun-err
 	if (msglen < len)
-		return len - msglen;
+		return static_cast<int>(len - msglen);
 
 	if (msg[1] & 0x80)
 		return EOK; //exception msg
 
 	len = GetSlaveMsgMinLen(msg);
 	if (msglen < len)
-		return len - msglen;
+		return static_cast<int>(len - msglen);
 
 	len = GetSlaveMsgMaxLen(msg);
 	if (msglen < len)
-		return len - msglen;
+		return static_cast<int>(len - msglen);
 
 	return EOK; 
 }
@@ -369,7 +370,7 @@ int Protocol::ParseMasterMsg(uint8_t *msg, size_t msglen, MsgInf &inf)
 }
 
 //Used by master
-int Protocol::ParseSlaveMsg(uint8_t *msg, size_t msglen, MsgInf &inf)
+int Protocol::ParseSlaveMsg(uint8_t *msg, size_t /*msglen*/, MsgInf &inf)
 {
 	uint8_t *pbuf = msg;
 

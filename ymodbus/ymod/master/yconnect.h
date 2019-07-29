@@ -7,6 +7,7 @@
 #define __YMODBUS_MBCONNECT_H__
 
 #include <stdint.h>
+#include <stddef.h>
 
 namespace YModbus {
 

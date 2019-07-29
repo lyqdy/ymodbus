@@ -15,7 +15,7 @@
 #	include <sys/types.h>
 #	include <sys/stat.h>
 #	define GLOG_NO_ABBREVIATED_SEVERITIES
-#	include "glog/logging.h"
+#	define LOG(x) std::cout << #x << ":"
 #else
 #	include <direct.h>
 #	define LOG(x) std::cout << #x << ":"

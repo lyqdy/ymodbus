@@ -24,12 +24,12 @@ public:
 
 	int GetMasterDataOffset(uint8_t fun)
 	{
-		return Protocol::GetMasterDataOffset(fun) + kRtuBufOff;
+		return static_cast<int>(Protocol::GetMasterDataOffset(fun) + kRtuBufOff);
 	}
 
 	int GetSlaveDataOffset(uint8_t fun)
 	{
-		return Protocol::GetSlaveDataOffset(fun) + kRtuBufOff;
+		return static_cast<int>(Protocol::GetSlaveDataOffset(fun) + kRtuBufOff);
 	}
 
 	size_t MakeMasterMsg(uint8_t *buf, size_t bufsiz, MsgInf &inf)
@@ -44,15 +44,19 @@ public:
 		*pbuf++ = ':'; //start char
 		std::for_each(prtu, prtu + msglen, [&pbuf](uint8_t d) {
 			*pbuf = static_cast<uint8_t>(d >> 4);
-			*pbuf++ += *pbuf <= 9 ? '0' : 'A' - 0xA;
+			*pbuf += *pbuf <= 9 ? '0' : 'A' - 0xA;
+			pbuf++;
 			*pbuf = static_cast<uint8_t>(d & 0xf);
-			*pbuf++ += *pbuf <= 9 ? '0' : 'A' - 0xA;
+			*pbuf += *pbuf <= 9 ? '0' : 'A' - 0xA;
+			pbuf++;
 		});
 
 		*pbuf = static_cast<uint8_t>(lrc >> 4);
-		*pbuf++ += *pbuf <= 9 ? '0' : 'A' - 0xA;
+		*pbuf += *pbuf <= 9 ? '0' : 'A' - 0xA;
+		pbuf++;
 		*pbuf = static_cast<uint8_t>(lrc & 0xf);
-		*pbuf++ += *pbuf <= 9 ? '0' : 'A' - 0xA;
+		*pbuf += *pbuf <= 9 ? '0' : 'A' - 0xA;
+		pbuf++;
 
 		*pbuf++ = '\r';
 		*pbuf++ = '\n';
@@ -75,15 +79,19 @@ public:
 		*pbuf++ = ':'; //start char
 		std::for_each(prtu, prtu + msglen, [&pbuf](uint8_t d) {
 			*pbuf = static_cast<uint8_t>(d >> 4);
-			*pbuf++ += *pbuf <= 9 ? '0' : 'A' - 0xA;
+			*pbuf += *pbuf <= 9 ? '0' : 'A' - 0xA;
+			pbuf++;
 			*pbuf = static_cast<uint8_t>(d & 0xf);
-			*pbuf++ += *pbuf <= 9 ? '0' : 'A' - 0xA;
+			*pbuf += *pbuf <= 9 ? '0' : 'A' - 0xA;
+			pbuf++;
 		});
 
 		*pbuf = static_cast<uint8_t>(lrc >> 4);
-		*pbuf++ += *pbuf <= 9 ? '0' : 'A' - 0xA;
+		*pbuf += *pbuf <= 9 ? '0' : 'A' - 0xA;
+		pbuf++;
 		*pbuf = static_cast<uint8_t>(lrc & 0xf);
-		*pbuf++ += *pbuf <= 9 ? '0' : 'A' - 0xA;
+		*pbuf += *pbuf <= 9 ? '0' : 'A' - 0xA;
+		pbuf++;
 
 		*pbuf++ = '\r';
 		*pbuf++ = '\n';
@@ -98,7 +106,7 @@ public:
 	int VerifyMasterMsg(uint8_t *msg, size_t msglen)
 	{
 		if (msglen < kMinAsciiMsgLen) //:-id-fun-xxx-lrc-\r\n
-			return kMinAsciiMsgLen - msglen; //expect data
+			return static_cast<int>(kMinAsciiMsgLen - msglen); //expect data
 
 		if (msg[0] != ':')
 			return -EBADMSG;
@@ -118,7 +126,7 @@ public:
 	int VerifySlaveMsg(uint8_t *msg, size_t msglen)
 	{
 		if (msglen < kMinAsciiMsgLen) //:-id-fun-err-lrc-\r\n
-			return kMinAsciiMsgLen - msglen; //expect data
+			return static_cast<int>(kMinAsciiMsgLen - msglen); //expect data
 
 		if (msg[0] != ':')
 			return -EBADMSG;
@@ -152,13 +160,13 @@ public:
 		//msg has transformed base format
 		size_t rtulen = static_cast<size_t>(prtu - msg);
 		uint8_t lrc = (uint8_t)(~std::accumulate(msg, msg + rtulen, 0) + 1);
-		
+
 		lrc -= (msg[i] <= '9' ? msg[i] - '0' : msg[i] - 'A' + 0xA) << 4;
 		lrc -= msg[i + 1] <= '9' ? msg[i + 1] - '0' : msg[i + 1] - 'A' + 0xA;
 
 		if (lrc == 0 && Protocol::VerifyMasterMsg(msg, rtulen) == EOK)
 			return Protocol::ParseMasterMsg(msg, rtulen, inf);
-			
+
 		return -EBADMSG;
 	}
 
@@ -185,7 +193,7 @@ public:
 
 		if (lrc == 0 && Protocol::VerifySlaveMsg(msg, rtulen) == EOK)
 			return Protocol::ParseSlaveMsg(msg, rtulen, inf);
-		
+
 		return -EBADMSG;
 	}
 

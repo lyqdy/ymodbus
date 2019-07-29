@@ -4,6 +4,7 @@
 * v1.0.1 2019.05.04
 */
 #include "ymod/master/yudpconnect.h"
+#include "ymod/ymbutils.h"
 #include "ymblog.h"
 
 #ifdef WIN32
@@ -15,6 +16,7 @@
 #	include <sys/socket.h>
 #	include <netinet/in.h>
 #   include <arpa/inet.h>
+#   include <unistd.h>
 #	define closesocket close
 #endif
 
@@ -35,10 +37,10 @@ namespace {
 struct UdpConnect::Impl
 {
 	Impl(const std::string &ip, uint16_t port)
-		: ip_(ip), port_(port), sock_(INVALID_SOCKET) 
+		: ip_(ip), port_(port), sock_(INVALID_SOCKET)
 	{
 	}
-	
+
 	~Impl()
 	{
 		Clear();
@@ -96,11 +98,11 @@ bool UdpConnect::Validate(void)
 	addr.sin_port = htons(impl_->port_);
 	addr.sin_addr.s_addr = inet_addr(impl_->ip_.c_str());
 
-	if (connect(impl_->sock_, (SOCKADDR*)&addr, sizeof(addr)) != 0) {
+	if (connect(impl_->sock_, (struct sockaddr *)&addr, sizeof(addr)) != 0) {
 		impl_->Clear();
 		return false;
 	}
-		
+
 	return true;
 }
 
@@ -171,7 +173,7 @@ int UdpConnect::Recv(uint8_t *buf, size_t len)
 			}
 		}
 	}
-	
+
 	return ret;
 }
 

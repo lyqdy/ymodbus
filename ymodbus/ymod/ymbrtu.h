@@ -59,7 +59,7 @@ public:
 	int VerifyMasterMsg(uint8_t *msg, size_t msglen)
 	{
 		if (msglen < kMinRtuMsgLen)
-			return kMinRtuMsgLen - msglen;
+			return static_cast<int>(kMinRtuMsgLen - msglen);
 
 		int expect = Protocol::VerifyMasterMsg(msg, msglen - 2);
 		if (expect != 0)
@@ -73,7 +73,7 @@ public:
 	int VerifySlaveMsg(uint8_t *msg, size_t msglen)
 	{
 		if (msglen < kMinRtuMsgLen)
-			return kMinRtuMsgLen - msglen;
+			return static_cast<int>(kMinRtuMsgLen - msglen);
 
 		int expect = Protocol::VerifySlaveMsg(msg, msglen - 2);
 		if (expect != 0)

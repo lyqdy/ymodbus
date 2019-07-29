@@ -19,6 +19,7 @@
 #include <queue>
 #include <mutex>
 #include <condition_variable>
+#include <cstring>
 
 namespace YModbus {
 
@@ -43,30 +44,30 @@ const long kPerReadTimeout = 10; //ms
 struct Master::Impl : public Task
 {
 public:
-	typedef Net<IProtocol> Net;
-	typedef Rtu<IProtocol> Rtu;
-	typedef Ascii<IProtocol> Ascii;
+	typedef Net<IProtocol> INet;
+	typedef Rtu<IProtocol> IRtu;
+	typedef Ascii<IProtocol> IAscii;
 
 	Impl(eThreadMode thrm)
 		: retries_(kDefRetries)
 		, rdto_(kDefRdTimeout)
-		, thrm_(thrm) 
+		, thrm_(thrm)
 	{
 		if (thrm_ == TASK)
 			this->Start();
 	}
 
-	~Impl() 
+	~Impl()
 	{
 		if (thrm_ == TASK) {
 			this->Stop();
 			this->Wait();
 		}
 	}
-	
+
 	int Read(MsgInf &inf, uint8_t *buf, size_t bufsiz)
 	{
-		if (buf == nullptr) { 
+		if (buf == nullptr) {
 			//We don't need any response datas here.
 			//But store will be updated after here.
 			return this->SendRequest(inf);
@@ -110,8 +111,11 @@ public:
 			return -EFAULT;
 		}
 
-		if (inf.id != sid || inf.fun == fun || inf.wreg != reg) {
-			YMB_DEBUG("eXecute Write response error id/fun/reg\n");
+		if (inf.id != sid || inf.fun != fun || inf.wreg != reg) {
+			YMB_DEBUG("eXecute Write response error id/fun/reg"
+                "send: id = %02x, fun = %02x, reg = %02x \n"
+                "recv: id = %02x, fun = %02x, reg = %02x \n",
+                sid, fun, reg, inf.id, inf.fun, inf.wreg);
 			return -EBADF;
 		}
 
@@ -135,7 +139,7 @@ public:
 					//等待执行
 					std::unique_lock<std::mutex> lockr(req->mutex);
 					req->cond.wait(lockr);
-				
+
 					//错误信息存放在线程局部变量
 					error = req->err;
 				}
@@ -163,7 +167,7 @@ public:
 	}
 
 	const long perto_ = kPerReadTimeout; //ms 每次接收超时
-	uint32_t retries_; 
+	uint32_t retries_;
 	long rdto_; //read timeout
 	eThreadMode thrm_;
 	uint8_t msgbuf_[kMaxMsgLen];
@@ -230,6 +234,8 @@ int Master::Impl::SendRecv(MsgInf &inf)
 	size_t msglen = prot_->MakeMasterMsg(inf.pbuf, inf.bufsiz, inf);
 
 	conn_->Purge(); //清空buffer
+
+	YMB_HEXDUMP0(inf.pbuf, msglen, "send: ");
 	if (!conn_->Send(inf.pbuf, msglen))
 		return -ENETRESET;
 
@@ -237,6 +243,7 @@ int Master::Impl::SendRecv(MsgInf &inf)
 	for (long to = 0; to < rdto_; to += perto_) { //timeout
 		int ret = conn_->Recv(inf.pbuf + msglen, inf.bufsiz - msglen);
 		if (ret > 0) { //received some data
+		    YMB_HEXDUMP0(inf.pbuf + msglen, ret, "recv: ");
 			msglen += ret;
 			ret = prot_->VerifySlaveMsg(inf.pbuf, msglen);
 			if (ret == EOK) //OK, msg arrived
@@ -305,34 +312,34 @@ Master::Master(const std::string &ip, uint16_t port,
 {
 	switch (type) {
 	case TCP:
-		impl_->prot_ = std::make_unique<Impl::Net>();
+		impl_->prot_ = std::make_unique<Impl::INet>();
 		impl_->conn_ = std::make_unique<TcpConnect>(ip, port);
 		break;
 	case TCPRTU:
-		impl_->prot_ = std::make_unique<Impl::Rtu>();
+		impl_->prot_ = std::make_unique<Impl::IRtu>();
 		impl_->conn_ = std::make_unique<TcpConnect>(ip, port);
 		break;
 	case TCPASCII:
-		impl_->prot_ = std::make_unique<Impl::Ascii>();
+		impl_->prot_ = std::make_unique<Impl::IAscii>();
 		impl_->conn_ = std::make_unique<TcpConnect>(ip, port);
 		break;
 	case UDP:
-		impl_->prot_ = std::make_unique<Impl::Net>();
+		impl_->prot_ = std::make_unique<Impl::INet>();
 		impl_->conn_ = std::make_unique<UdpConnect>(ip, port);
 		break;
 	case UDPRTU:
-		impl_->prot_ = std::make_unique<Impl::Rtu>();
+		impl_->prot_ = std::make_unique<Impl::IRtu>();
 		impl_->conn_ = std::make_unique<UdpConnect>(ip, port);
 		break;
 	case UDPASCII:
-		impl_->prot_ = std::make_unique<Impl::Ascii>();
+		impl_->prot_ = std::make_unique<Impl::IAscii>();
 		impl_->conn_ = std::make_unique<UdpConnect>(ip, port);
 		break;
 	default:
 		YMB_ASSERT(false);
 		break;
 	}
-	
+
 	impl_->conn_->SetTimeout(impl_->perto_);
 	impl_->conn_->Validate();
 }
@@ -343,12 +350,12 @@ Master::Master(const std::string &com, uint32_t baudrate,
 {
 	switch (type) {
 	case RTU:
-		impl_->prot_ = std::make_unique<Impl::Rtu>();
+		impl_->prot_ = std::make_unique<Impl::IRtu>();
 		impl_->conn_ = std::make_unique<SerConnect>(com,
 			baudrate, 8, parity, stopbits);
 		break;
 	case ASCII:
-		impl_->prot_ = std::make_unique<Impl::Ascii>();
+		impl_->prot_ = std::make_unique<Impl::IAscii>();
 		impl_->conn_ = std::make_unique<SerConnect>(com,
 			baudrate, 7, parity, stopbits);
 		break;
@@ -406,7 +413,7 @@ int Master::GetLastError(void) const
 
 std::string Master::GetErrorString(int err) const
 {
-	return std::to_string(impl_->error);
+	return std::to_string(err);
 }
 
 bool Master::CheckConnect(void)
@@ -473,7 +480,7 @@ int Master::ReadHoldingRegisters(uint8_t sid,
 	return impl_->Read(inf, buf, bufsiz);
 }
 
-//return: = 0, OK; 
+//return: = 0, OK;
 //return: < 0, errorcode of exception
 //values: data value, net order
 int Master::WriteSingleCoil(uint8_t sid, uint16_t reg, bool onoff)
@@ -500,7 +507,7 @@ int Master::WriteCoils(uint8_t sid,
 
 int Master::WriteSingleRegister(uint8_t sid, uint16_t reg, uint16_t value)
 {
-	uint8_t databuf[] = { 
+	uint8_t databuf[] = {
 		static_cast<uint8_t>(value >> 8),
 		static_cast<uint8_t>(value & 0xff)
 	};
@@ -512,7 +519,7 @@ int Master::WriteSingleRegister(uint8_t sid, uint16_t reg, uint16_t value)
 int Master::WriteRegisters(uint8_t sid,
 	uint16_t reg, uint16_t num, const uint8_t *values, uint8_t wbytes)
 {
-	MsgInf inf = { sid, kFunWriteAndReadRegisters, 0, 0, reg, num };
+	MsgInf inf = { sid, kFunWriteMultiRegisters, 0, 0, reg, num };
 
 	inf.databuf = const_cast<uint8_t*>(values);
 	inf.datalen = wbytes;
@@ -523,7 +530,7 @@ int Master::WriteRegisters(uint8_t sid,
 int Master::MaskWriteRegisters(uint8_t sid,
 	uint16_t reg, uint16_t andmask, uint16_t ormask)
 {
-	uint8_t databuf[] = { 
+	uint8_t databuf[] = {
 		static_cast<uint8_t>(andmask >> 8),
 		static_cast<uint8_t>(andmask & 0xff),
 		static_cast<uint8_t>(ormask >> 8),
@@ -551,7 +558,7 @@ int Master::WriteReadRegisters(uint8_t sid,
 
 //return: >= 0, OK
 //return: < 0,  errorcode of exception
-int Master::ReportSlaveId(uint8_t maxsid, uint8_t *buf, size_t bufsiz)
+int Master::ReportSlaveId(uint8_t /* maxsid */, uint8_t * /* buf */, size_t /* bufsiz*/)
 {
 	YMB_DEBUG("%s%s not implementation.\n", __FILE__, __func__);
 

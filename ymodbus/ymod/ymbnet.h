@@ -75,7 +75,7 @@ public:
 		if (msglen >= kHdrSiz)
 			return Protocol::VerifyMasterMsg(msg + kHdrSiz, msglen - kHdrSiz);
 			
-		return kHdrSiz - msglen;
+		return static_cast<int>(kHdrSiz - msglen);
 	}
 
 	int VerifySlaveMsg(uint8_t *msg, size_t msglen)
@@ -83,7 +83,7 @@ public:
 		if (msglen >= kHdrSiz)
 			return Protocol::VerifySlaveMsg(msg + kHdrSiz, msglen - kHdrSiz);
 		
-		return kHdrSiz - msglen;
+		return static_cast<int>(kHdrSiz - msglen);
 	}
 
 	//Used by slave
