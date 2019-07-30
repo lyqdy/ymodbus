@@ -157,12 +157,12 @@ int TcpConnect::Recv(uint8_t *buf, size_t len)
 	int ret = -ENOLINK;
 
 	if (impl_->sock_ != INVALID_SOCKET) {
+	    struct timeval tv = impl_->tv_;
 		fd_set fdsets;
-
 		FD_ZERO(&fdsets);
 		FD_SET(impl_->sock_, &fdsets);
 
-		ret = select(impl_->sock_ + 1, &fdsets, NULL, NULL, &impl_->tv_);
+		ret = select(impl_->sock_ + 1, &fdsets, NULL, NULL, &tv);
 		if (ret > 0 && FD_ISSET(impl_->sock_, &fdsets)) {
 			ret = recv(impl_->sock_, reinterpret_cast<char *>(buf), len, 0);
 			if (ret == 0) {
