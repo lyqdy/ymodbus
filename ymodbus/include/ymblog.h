@@ -14,6 +14,7 @@
 #ifndef WIN32
 #	include <sys/types.h>
 #	include <sys/stat.h>
+#	include <sys/time.h>
 #	define GLOG_NO_ABBREVIATED_SEVERITIES
 #	define LOG(x) std::cout << #x << ":"
 #else
@@ -37,12 +38,29 @@
 
 #ifndef NDEBUG
 
-#define YMB_DEBUG(fmt, ...) fprintf(stdout, fmt, ##__VA_ARGS__)
-#define YMB_ERROR(fmt, ...) fprintf(stderr, fmt, ##__VA_ARGS__)
+#define YMB_DEBUG(fmt, ...)  do {        \
+    struct timeval __tv;                  \
+    gettimeofday(&__tv, NULL);            \
+    fprintf(stdout, "%ld.%06ld: ",      \
+             __tv.tv_sec, __tv.tv_usec);    \
+    fprintf(stdout, fmt, ##__VA_ARGS__);\
+} while (0)
+
+#define YMB_ERROR(fmt, ...)  do {        \
+    struct timeval __tv;                  \
+    gettimeofday(&__tv, NULL);            \
+    fprintf(stderr, "%ld.%06ld: ",      \
+             __tv.tv_sec,__tv.tv_usec);    \
+    fprintf(stderr, fmt, ##__VA_ARGS__);\
+} while (0)
 
 #define YMB_HEXDUMP(_xbuf, _xlen, fmt, ...)						\
 	do {														\
 		uint8_t *__xbuf = (uint8_t *)(_xbuf);					\
+        struct timeval __tv;                                      \
+        gettimeofday(&__tv, NULL);                                \
+        fprintf(stdout, "%ld.%06ld: ",                          \
+             __tv.tv_sec, __tv.tv_usec);                            \
 		fprintf(stdout, fmt, ##__VA_ARGS__);					\
 		for (size_t _i = 0; _i < (size_t)(_xlen); ++_i) {		\
 			fprintf(stdout, "%02X ", __xbuf[_i]);				\

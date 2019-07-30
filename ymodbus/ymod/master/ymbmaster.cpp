@@ -128,6 +128,9 @@ public:
 		error = -EFAULT;
 
 		do {
+		    if (retry != 0) {
+                YMB_DEBUG0("SendRequest retry %u\n", retry);
+		    }
 			if (thrm_ == TASK) {
 				if (auto req = std::make_shared<Request>(inf)) {
 					//发送请求

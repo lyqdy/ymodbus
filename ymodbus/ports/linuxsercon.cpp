@@ -29,7 +29,10 @@ struct SerConnect::Impl
 	Impl(const std::string &port,
 		uint32_t baudrate, uint8_t databits, char parity, uint8_t stopbits)
 		: fd_(-1)
+		, t35_(1000000 * 12 * 20 / baudrate / 1000)
 	{
+
+
         SetReadTimeout(10);
 
 		/* Open the serial device. */
@@ -135,6 +138,7 @@ struct SerConnect::Impl
 
 	int fd_;
 	struct timeval tv_;
+	uint32_t t35_; //ms
 };
 
 SerConnect::SerConnect(const std::string &com,
@@ -185,6 +189,7 @@ bool SerConnect::Send(uint8_t *buf, size_t len)
 		do {
 			ret = write(impl_->fd_, pbuf, len);
 			if (ret > 0) {
+			    YMB_HEXDUMP0(pbuf, ret, "SerConnect::Send: ");
 				len -= static_cast<size_t>(ret);
 				pbuf += static_cast<size_t>(ret);
 			}
@@ -199,32 +204,38 @@ bool SerConnect::Send(uint8_t *buf, size_t len)
 
 int SerConnect::Recv(uint8_t *buf, size_t len)
 {
-	if (impl_->fd_ != -1) {
+    int recvlen = 0;
+
+ 	if (impl_->fd_ != -1) {
 	    struct timeval tv = impl_->tv_;
 		fd_set fds;
-		FD_ZERO(&fds);
-		FD_SET(impl_->fd_, &fds);
+        int ret;
 
-		int ret = select(impl_->fd_ + 1, &fds, nullptr, nullptr, &tv);
-		if (ret <= 0)
-			return 0;
+		do {
+            FD_ZERO(&fds);
+            FD_SET(impl_->fd_, &fds);
 
-		if (FD_ISSET(impl_->fd_, &fds)) {
-			ret = read(impl_->fd_,
-               reinterpret_cast<char*>(buf), static_cast<int>(len));
-            if (ret > 0) {
-                YMB_HEXDUMP0(buf, ret, "SerConnect::Recv: ");
+            ret = select(impl_->fd_ + 1, &fds, nullptr, nullptr, &tv);
+            if (ret > 0 && FD_ISSET(impl_->fd_, &fds)) {
+                ret = read(impl_->fd_,
+                            reinterpret_cast<char*>(buf) + recvlen,
+                            static_cast<int>(len) - recvlen);
+                if (ret > 0) {
+                    YMB_HEXDUMP0(buf + recvlen, ret, "SerConnect::Recv: ");
+                    recvlen += ret;
+                }
             }
-            return ret;
-		}
-        else {
-		    YMB_DEBUG0("%s:%d ret = %d\n", __FILE__, __LINE__, ret);
-            return 0;
-        }
+            else {
+                YMB_DEBUG0("SerConnect::Recv recvlen = %d, ret = %d\n",
+                          recvlen, ret);
+            }
+
+            tv.tv_sec = impl_->t35_ / 1000;
+            tv.tv_usec = impl_->t35_ % 1000 * 1000;
+		} while (ret > 0 && recvlen < static_cast<int>(len));
 	}
 
-    YMB_DEBUG0("%s:%d ENODEV\n", __FILE__, __LINE__);
-	return -ENODEV;
+	return recvlen;
 }
 
 } //namespace YModbus
