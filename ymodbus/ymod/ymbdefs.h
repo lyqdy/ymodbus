@@ -73,6 +73,11 @@ typedef enum {
 	BOR_2143, //0x01020304=>{ 0x02, 0x01, 0x04, 0x03 } big-endian byte swap
 } eByteOrder;
 
+typedef enum {
+	SM_OriginalOctetStream,
+	SM_XchangedByteStream
+} eStringMode;
+
 const uint8_t kFunReadCoils				= 0x01;
 const uint8_t kFunReadDiscreteInputs	= 0x02;
 const uint8_t kFunReadHoldingRegisters	= 0x03;

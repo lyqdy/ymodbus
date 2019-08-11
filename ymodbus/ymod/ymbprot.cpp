@@ -405,18 +405,10 @@ int Protocol::ParseSlaveMsg(uint8_t *msg, size_t /*msglen*/, MsgInf &inf)
 		case kFunReadDiscreteInputs:
 		case kFunReadHoldingRegisters:
 		case kFunReadInputRegisters:
-			inf.rreg = INVALID_REG;
-			inf.rnum = INVALID_NUM;
-			inf.wreg = INVALID_REG;
-			inf.wnum = INVALID_NUM;
 			inf.datalen = *pbuf++;
 			inf.databuf = pbuf;
 			break;
 		case kFunWriteAndReadRegisters:
-			inf.rreg = INVALID_REG;
-			inf.rnum = INVALID_NUM;
-			inf.wreg = INVALID_REG;
-			inf.wnum = INVALID_NUM;
 			inf.datalen = *pbuf++;
 			inf.databuf = pbuf;
 			break;
