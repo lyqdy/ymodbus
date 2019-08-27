@@ -189,7 +189,7 @@ bool SerConnect::Send(uint8_t *buf, size_t len)
 		do {
 			ret = write(impl_->fd_, pbuf, len);
 			if (ret > 0) {
-			    YMB_HEXDUMP0(pbuf, ret, "SerConnect::Send: ");
+			    YMB_HEXDUMP0(pbuf, ret, "%p SerConnect::Send: ", this);
 				len -= static_cast<size_t>(ret);
 				pbuf += static_cast<size_t>(ret);
 			}
@@ -221,7 +221,7 @@ int SerConnect::Recv(uint8_t *buf, size_t len)
                             reinterpret_cast<char*>(buf) + recvlen,
                             static_cast<int>(len) - recvlen);
                 if (ret > 0) {
-                    YMB_HEXDUMP0(buf + recvlen, ret, "SerConnect::Recv: ");
+                    YMB_HEXDUMP0(buf + recvlen, ret, "%p SerConnect::Recv: ", this);
                     recvlen += ret;
                 }
             }

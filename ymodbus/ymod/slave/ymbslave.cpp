@@ -49,11 +49,13 @@ struct Slave::Impl : public Task
 	int err_ = 0;
 	uint8_t id_ = kAnySlaveId; //slave id
 
+	std::weak_ptr<IMonitor> monitor_;
 	std::unique_ptr<IProtocol> prot_;
 	std::shared_ptr<IPlayer> player_;
 
 	std::unique_ptr<IListerner> listener_;
 	std::vector<SessionPtr> ses_;
+	std::string desc_;
 
 	uint8_t rspbuf_[kMaxMsgLen];
 	size_t bufsiz_ = kMaxMsgLen;
@@ -91,14 +93,23 @@ void Slave::Impl::Accept(void)
 
 		//msg has arrived
 		if (need == 0 && prot_->ParseMasterMsg(recvmsg, msglen, inf) == EOK) {
+			session->Purge();	
+
+			if (auto monitor = monitor_.lock())
+				monitor->RecvPacket(desc_, recvmsg, msglen);
+
 			if (inf.id == id_ || id_ == kAnySlaveId) { //token or careless id
 				size_t roff = prot_->GetSlaveDataOffset(inf.fun);
 				int rsp = Request(inf, rspbuf_ + roff, bufsiz_ - roff);
+
 				if (rsp >= 0 && inf.id != kBroadcastId) {
 					inf.databuf = nullptr; //The Datas have filled into rspbuf.
 					msglen = prot_->MakeSlaveMsg(rspbuf_, bufsiz_, inf);
-					session->Purge();	//clear port before response
 					session->Write(rspbuf_, msglen);
+
+					if (auto monitor = monitor_.lock())
+						monitor->SendPacket(desc_, rspbuf_, msglen);
+
 					YMB_HEXDUMP(rspbuf_, msglen,
 						"Response message! len = %u: \n", msglen);
 				}
@@ -211,6 +222,7 @@ Slave::Slave(const std::string& port,
 	}
 	
 	impl_->listener_->SetTimeout(kDefListenTimeout);
+	impl_->desc_ = std::string("tcp:") + port;
 
 	YMB_DEBUG("Create modbus slave server: %s: %s, mode: %s\n",
 		impl_->listener_->GetName().c_str(), PROTNAME(prot),
@@ -254,6 +266,7 @@ Slave::Slave(uint16_t port, eProtocol prot, eThreadMode thrm)
 	}
 
 	impl_->listener_->SetTimeout(kDefListenTimeout);
+	impl_->desc_ = std::string("tcp:") + std::to_string(port);
 
 	YMB_DEBUG("Create modbus slave server: %s: %s, mode: %s\n",
 		impl_->listener_->GetName().c_str(), PROTNAME(prot),
@@ -274,6 +287,16 @@ void Slave::SetSlaveId(uint8_t id)
 uint8_t Slave::GetSlaveId(void) const
 {
 	return impl_->id_;
+}
+
+void Slave::SetMonitor(std::shared_ptr<IMonitor> monitor)
+{
+	impl_->monitor_ = monitor;
+}
+
+std::shared_ptr<IMonitor> Slave::GetMonitor(void) const
+{
+	return impl_->monitor_.lock();
 }
 
 void Slave::SetPlayer(std::shared_ptr<IPlayer> player)

@@ -49,13 +49,15 @@ int SerListener::Impl::Write(uint8_t *msg, size_t msglen)
 			if (WriteFile(file_, pbuf, len, &dwWritten, NULL)) {
 				len -= dwWritten;
 				pbuf += dwWritten;
-				YMB_HEXDUMP0(pbuf, dwWritten,
-					"%s write data, len = %u", port_.c_str(), dwWritten);
+				FlushFileBuffers(file_);
 			}
 			else {
 				return -EFAULT; //error
 			}
 		} while (len != 0);
+
+		YMB_HEXDUMP(msg, msglen,
+			"%s write data, len = %u: ", port_.c_str(), dwWritten);
 
 		return msglen;
 	}
@@ -84,7 +86,7 @@ void SerListener::Impl::Purge(void)
 {
 	recvlen_ = 0;
 
-	if (file_ != INVALID_HANDLE_VALUE) 
+	if (file_ != INVALID_HANDLE_VALUE)
 		::PurgeComm(file_, PURGE_RXCLEAR | PURGE_TXCLEAR);
 }
 
@@ -107,7 +109,7 @@ bool SerListener::Impl::Recv()
 		if (recvlen_ == sizeof(recvbuf_))
 			recvlen_ = 0;
 		
-		if (ReadFile(file_, recvbuf_ + recvlen_, 
+		if (ReadFile(file_, recvbuf_ + recvlen_,
 			sizeof(recvbuf_) - recvlen_, &dwRead, NULL)) {
 			if (dwRead != 0) { //some bytes arrived
 				recvlen_ += dwRead;
@@ -209,9 +211,11 @@ void SerListener::SetTimeout(long to)
 	if (impl_->file_ != INVALID_HANDLE_VALUE) {
 		COMMTIMEOUTS cto = {0};
 
-		cto.ReadIntervalTimeout = to;
-		cto.ReadTotalTimeoutConstant = to;
-		
+		cto.ReadIntervalTimeout = 5;
+		cto.ReadTotalTimeoutConstant = 5;
+		cto.WriteTotalTimeoutMultiplier = 0;
+		cto.WriteTotalTimeoutConstant = 1000;
+
 		SetCommTimeouts(impl_->file_, &cto);
 	}
 }

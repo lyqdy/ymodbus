@@ -23,7 +23,7 @@ template<typename T>
 inline void YExchangeByteOrder(T &val)
 {
 	char *p = reinterpret_cast<char*>(&val);
-	std::reverse(p, p + sizeof(val));
+	::std::reverse(p, p + sizeof(val));
 }
 
 //template<typename T>
@@ -107,6 +107,33 @@ inline void YNetToHost(T &val, eByteOrder bor)
 }
 
 #define YHostToNet YNetToHost
+
+inline void YNetToHost(uint8_t *buf, int bufsiz, eByteOrder bor)
+{
+	switch (bor) {
+	case BOR_1234: //Big-endian
+					//0x01020304=>{0x01,0x02,0x03,0x04}=>{0x04,0x03,0x02,0x01}
+		::std::reverse(buf, buf + bufsiz);
+		break;
+	case BOR_3412: { //Little-endian byte swap
+						//0x01020304=>{0x03,0x04,0x01,0x02}=>{0x04,0x03,0x02,0x01}
+		YMB_ASSERT((bufsiz % 2) == 0);
+		for (int i = 0; i < bufsiz; i += 2) 
+			::std::swap(buf[i], buf[i+1]);
+		break; }
+	case BOR_4321:	//Little-endian
+					//0x01020304=>{0x04,0x03,0x02,0x01}=>{0x04,0x03,0x02,0x01}
+					//Nothing to do
+		break;
+	case BOR_2143: { // Big-endian byte swap
+						//0x01020304=>{0x02,0x01,0x04,0x03}=>{0x04,0x03,0x02,0x01}
+		//TODO
+		break; }
+	default:
+		YMB_ASSERT(false);
+		break;
+	} //switch (bor)
+}
 
 } //namesapce YModbus
 

@@ -383,17 +383,17 @@ int Protocol::ParseSlaveMsg(uint8_t *msg, size_t /*msglen*/, MsgInf &inf)
 		case kFunWriteSingleRegister:
 		case kFunMaskWriteRegister:
 			inf.rreg = INVALID_REG;
-			inf.rnum = INVALID_NUM;
+			inf.rnum = 0;
 			inf.wreg = *pbuf++ << 8;
 			inf.wreg |= *pbuf++;
 			inf.wnum = 1;
-			inf.datalen = 2;
-			inf.databuf = pbuf;
+			inf.datalen = 0;
+			inf.databuf = nullptr;
 			break;
 		case kFunWriteMultiCoils:
 		case kFunWriteMultiRegisters:
 			inf.rreg = INVALID_REG;
-			inf.rnum = INVALID_NUM;
+			inf.rnum = 0;
 			inf.wreg = *pbuf++ << 8;
 			inf.wreg |= *pbuf++;
 			inf.wnum = *pbuf++ << 8;
@@ -405,18 +405,10 @@ int Protocol::ParseSlaveMsg(uint8_t *msg, size_t /*msglen*/, MsgInf &inf)
 		case kFunReadDiscreteInputs:
 		case kFunReadHoldingRegisters:
 		case kFunReadInputRegisters:
-			inf.rreg = INVALID_REG;
-			inf.rnum = INVALID_NUM;
-			inf.wreg = INVALID_REG;
-			inf.wnum = INVALID_NUM;
 			inf.datalen = *pbuf++;
 			inf.databuf = pbuf;
 			break;
 		case kFunWriteAndReadRegisters:
-			inf.rreg = INVALID_REG;
-			inf.rnum = INVALID_NUM;
-			inf.wreg = INVALID_REG;
-			inf.wnum = INVALID_NUM;
 			inf.datalen = *pbuf++;
 			inf.databuf = pbuf;
 			break;

@@ -175,9 +175,11 @@ public:
 	eThreadMode thrm_;
 	uint8_t msgbuf_[kMaxMsgLen];
 
-	std::shared_ptr<IStore> store_;
+	std::weak_ptr<IMonitor> monitor_;
+	std::weak_ptr<IStore> store_;
 	std::unique_ptr<IProtocol> prot_;
 	std::unique_ptr<IConnect> conn_;
+	std::string desc_;
 	static thread_local int error; //TMaster api operate error
 
 protected:
@@ -212,17 +214,26 @@ int Master::Impl::ExecPoll(MsgInf &inf)
 	}
 
 	int ret = SendRecv(inf);
+	auto store = store_.lock();
 
-	if (ret == EOK && inf.datalen != 0 && store_) {
+	if (ret == EOK && inf.datalen != 0 && store) {
 		YMB_ASSERT(inf.databuf != nullptr);
-		store_->Set(inf.id, inf.rreg, inf.databuf, inf.rnum);
+		if (inf.fun == kFunReadCoils
+			|| inf.fun == kFunReadDiscreteInputs) { //bit
+			for (uint16_t i = 0; i < inf.rnum; i++) { //one bit to one register
+				uint8_t val[] = { 0,
+					static_cast<uint8_t>((inf.databuf[i/8] >> (i%8)) & 0x1) };
+				store->Set(inf.id, inf.rreg + i, val, 1);
+			}
+		}
+		else { //register
+			store->Set(inf.id, inf.rreg, inf.databuf, inf.rnum);
+		}
 	}
 
 	if (bInnerBuf) {
 		inf.pbuf = nullptr;
 		inf.bufsiz = 0;
-		inf.databuf = nullptr;
-		inf.datalen = 0;
 	}
 
 	return ret;
@@ -242,6 +253,9 @@ int Master::Impl::SendRecv(MsgInf &inf)
 	if (!conn_->Send(inf.pbuf, msglen))
 		return -ENETRESET;
 
+	if (auto monitor = monitor_.lock())
+		monitor->SendPacket(desc_, inf.pbuf, static_cast<int>(msglen));
+
 	msglen = 0;
 	for (long to = 0; to < rdto_; to += perto_) { //timeout
 		int ret = conn_->Recv(inf.pbuf + msglen, inf.bufsiz - msglen);
@@ -249,8 +263,11 @@ int Master::Impl::SendRecv(MsgInf &inf)
 		    YMB_HEXDUMP0(inf.pbuf + msglen, ret, "recv: ");
 			msglen += ret;
 			ret = prot_->VerifySlaveMsg(inf.pbuf, msglen);
-			if (ret == EOK) //OK, msg arrived
+			if (ret == EOK) { //OK, msg arrived
+				if (auto monitor = monitor_.lock())
+					monitor->RecvPacket(desc_, inf.pbuf, static_cast<int>(msglen));
 				return prot_->ParseSlaveMsg(inf.pbuf, msglen, inf);
+			}
 			if (ret < 0) //msg error
 				return -EBADMSG;
 		}
@@ -345,6 +362,7 @@ Master::Master(const std::string &ip, uint16_t port,
 
 	impl_->conn_->SetTimeout(impl_->perto_);
 	impl_->conn_->Validate();
+	impl_->desc_ = ip + ":" + std::to_string(port);
 }
 
 Master::Master(const std::string &com, uint32_t baudrate,
@@ -369,11 +387,22 @@ Master::Master(const std::string &com, uint32_t baudrate,
 
 	impl_->conn_->SetTimeout(impl_->perto_);
 	impl_->conn_->Validate();
+	impl_->desc_ = com;
 }
 
 Master::~Master()
 {
 
+}
+
+void Master::SetMonitor(std::shared_ptr<IMonitor> monitor)
+{
+	impl_->monitor_ = monitor;
+}
+
+std::shared_ptr<IMonitor> Master::GetMonitor(void) const
+{
+	return impl_->monitor_.lock();
 }
 
 void Master::SetStore(std::shared_ptr<IStore> store)
@@ -383,7 +412,7 @@ void Master::SetStore(std::shared_ptr<IStore> store)
 
 std::shared_ptr<IStore> Master::GetStore(void) const
 {
-	return impl_->store_;
+	return impl_->store_.lock();
 }
 
 //reties: retry count

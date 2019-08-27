@@ -8,6 +8,7 @@
 
 #include "ymod/ymbdefs.h"
 #include "ymod/ymbstore.h"
+#include "ymod/ymbmonitor.h"
 #include "ymod/ymbplayer.h"
 #include "ymod/ymbutils.h"
 
@@ -32,6 +33,9 @@ public:
 	Master &operator = (Master &&t) = default;
 
 	~Master(void);
+
+	void SetMonitor(std::shared_ptr<IMonitor> monitor);
+	std::shared_ptr<IMonitor> GetMonitor(void) const;
 
 	void SetStore(std::shared_ptr<IStore> store);
 	std::shared_ptr<IStore> GetStore(void) const;

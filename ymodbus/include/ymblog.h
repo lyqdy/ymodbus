@@ -19,7 +19,16 @@
 #	define LOG(x) std::cout << #x << ":"
 #else
 #	include <direct.h>
+#	include <time.h>
+#	include <winsock2.h>
 #	define LOG(x) std::cout << #x << ":"
+inline void gettimeofday(struct timeval *tv, void *tz) {
+	SYSTEMTIME t;
+	GetLocalTime(&t);
+	tv->tv_sec = t.wSecond;
+	tv->tv_usec = t.wMilliseconds * 1000;
+	(void)tz; 
+} 
 #endif
 
 #ifndef ASSERT

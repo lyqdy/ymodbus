@@ -8,6 +8,7 @@
 
 #include "ymod/ymbdefs.h"
 #include "ymod/ymbplayer.h"
+#include "ymod/ymbmonitor.h"
 
 #include <string>
 #include <memory>
@@ -43,6 +44,9 @@ public:
 	//By default, any id will receipt(id=0)
 	void SetSlaveId(uint8_t id);
 	uint8_t GetSlaveId(void) const;
+
+	void Slave::SetMonitor(std::shared_ptr<IMonitor> monitor);
+	std::shared_ptr<IMonitor> Slave::GetMonitor(void) const;
 
 	void SetPlayer(std::shared_ptr<IPlayer> player);
 	std::shared_ptr<IPlayer> GetPlayer(void) const;
