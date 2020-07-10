@@ -147,7 +147,8 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>../;../include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -202,9 +203,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <Text Include="ReadMe.txt" />
-  </ItemGroup>
-  <ItemGroup>
     <ClInclude Include="..\include\ymblog.h" />
     <ClInclude Include="..\include\ymbopts.h" />
     <ClInclude Include="..\include\ymbport.h" />
@@ -232,14 +230,8 @@
     <ClInclude Include="..\ymod\ymbstore.h" />
     <ClInclude Include="..\ymod\ymbtask.h" />
     <ClInclude Include="..\ymod\ymbutils.h" />
-    <ClInclude Include="stdafx.h" />
-    <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\ports\linuxserlistener.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='TestMaster|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='TestSlave|Win32'">true</ExcludedFromBuild>
-    </ClCompile>
     <ClCompile Include="..\ports\w32sercon.cpp" />
     <ClCompile Include="..\ports\winserlistener.cpp" />
     <ClCompile Include="..\ports\ytcpconnect.cpp" />
@@ -251,10 +243,6 @@
     <ClCompile Include="..\ymod\ymbcrc.cpp" />
     <ClCompile Include="..\ymod\ymbprot.cpp" />
     <ClCompile Include="..\ymod\ymbtask.cpp" />
-    <ClCompile Include="stdafx.cpp" />
-    <ClCompile Include="test_ymaster.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='TestSlave|Win32'">true</ExcludedFromBuild>
-    </ClCompile>
     <ClCompile Include="test_yslave.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='TestMaster|Win32'">true</ExcludedFromBuild>
     </ClCompile>
